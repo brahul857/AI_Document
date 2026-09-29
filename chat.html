@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Document Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Markdown Parser Library -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-main: #f8fafc;
+      --bg-panel: #ffffff;
+      --bg-chat: #f8fafc;
+      --border-color: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --assistant-bubble: #ffffff;
+      --user-bubble: #2563eb;
+      --accent-glow: rgba(37, 99, 235, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      color: var(--text-main);
+      background-color: var(--bg-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    .shell {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      background: var(--bg-main);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 32px;
+      background-color: var(--bg-panel);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: #2563eb;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .subtitle {
+      margin: 2px 0 0;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    button { cursor: pointer; transition: all 0.2s ease; }
+
+    #clear {
+      padding: 8px 16px;
+      color: var(--text-muted);
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    #clear:hover {
+      color: var(--text-main);
+      border-color: #cbd5e1;
+      background-color: #f1f5f9;
+    }
+
+    #messages {
+      overflow-y: auto;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+    }
+
+.welcome {
+  max-width: 600px;
+  margin: auto;
+  text-align: center;
+  padding: 40px;
+  background: transparent; /* Makes the panel background transparent */
+  border: 1px solid var(--border-color); /* Remove or adjust if you want the outline gone too */
+  border-radius: 12px;
+  box-shadow: none; /* Removed the shadow so it blends seamlessly into the page background */
+}
+
+    .mark {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 20px;
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+      border-radius: 10px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .welcome p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .message {
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      animation: rise .2s ease-out;
+    }
+
+    .message.user { justify-content: flex-end; }
+
+    .bubble {
+      max-width: 95%;
+      padding: 16px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+      overflow-x: auto;
+    }
+
+    .assistant .bubble {
+      background: var(--assistant-bubble);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    
+    .user .bubble {
+        background: #e8f1ff;
+        color: #1f2937;
+        border-bottom-right-radius: 2px;
+    }
+    /* Clean Light Mode Markdown & Table Styling */
+    .bubble p { margin: 0 0 12px; }
+    .bubble p:last-child { margin-bottom: 0; }
+    .bubble h1, .bubble h2, .bubble h3 { color: #2563eb; margin: 16px 0 8px; font-weight: 600; }
+    .bubble ul, .bubble ol { margin: 0 0 12px 20px; padding: 0; }
+   
+    .bubble table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .bubble th, .bubble td {
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+    }
+
+    .bubble th {
+      background-color: #f1f5f9;
+      color: #1e3a8a;
+      font-weight: 600;
+    }
+
+    .bubble tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    .sources {
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .sources b {
+      color: #2563eb;
+      font-weight: 500;
+    }
+
+    .composer {
+      padding: 20px 32px;
+      background-color: var(--bg-panel);
+      border-top: 1px solid var(--border-color);
+    }
+
+    form {
+      max-width: 900px;
+      margin: auto;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    textarea {
+      flex: 1;
+      min-height: 48px;
+      max-height: 160px;
+      resize: none;
+      padding: 13px 18px;
+      color: var(--text-main);
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      outline: 0;
+      font: 14px/1.5 'Inter', system-ui, sans-serif;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    #send {
+      height: 48px;
+      min-width: 104px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 12px;
+      color: #fff;
+      background: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, .2);
+      transition: background-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    }
+
+    .loading-spinner {
+      width: 15px;
+      height: 15px;
+      border: 2px solid rgba(255,255,255,.35);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      display: none;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    #send.loading .loading-spinner {
+      display: inline-block;
+    }
+
+    #send.loading .send-icon {
+      display: none;
+    }
+
+    #send.loading .send-label {
+      display: inline-block;
+    }
+
+    #send:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 6px 16px rgba(37, 99, 235, .28);
+      transform: translateY(-1px);
+    }
+
+    #send:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, .24);
+      outline-offset: 3px;
+    }
+
+    #send:active { transform: translateY(0); }
+    #send:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .send-icon {
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    #status {
+      max-width: 900px;
+      height: 18px;
+      margin: 8px auto 0;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+.suggestion-bubbles {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.bubble-btn {
+  background-color: #f1f3f4;
+  border: 1px solid #dadce0;
+  border-radius: 16px;
+  padding: 8px 14px;
+  font-size: 14px;
+  color: #3c4043;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.bubble-btn:hover {
+  background-color: #e8eaed;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+    /* Chat charts */
+    .chat-chart {
+      width: 100%;
+      margin: 18px 0 4px;
+      padding: 16px;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      min-height: 320px;
+    }
+
+    .chat-chart canvas {
+      width: 100% !important;
+      height: 300px !important;
+      display: block;
+    }
+
+    .chart-title {
+      margin: 0 0 12px;
+      color: #1e3a8a;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      header { padding: 16px 20px; }
+      #messages { padding: 20px 16px; }
+      .composer { padding: 16px; }
+      .bubble { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <p class="eyebrow">AI ASSISTANCE</p>
+        <h3>AI DOCUMENT SEARCH </h3>
+        <p class="subtitle">Data-driven insights, amplified by intelligence</p>
+      </div>
+      <button id="clear" type="button">Clear Chat</button>
+    </header>
+    <section id="messages" aria-live="polite">
+      <div class="welcome" id="welcome">
+        <div class="mark" aria-label="Chatbot">&#129302;</div>
+        <!-- Example Suggestion Bubbles Container -->
+<div class="suggestion-bubbles" id="suggestionBubbles">
+  <!--<button class="bubble-btn" onclick="sendDefaultQuery('Library Analysis Report 2024-25 Session')">
+    📄 Library Analysis Report 2024-25 Session
+  </button>
+  <button class="bubble-btn" onclick="sendDefaultQuery('Overall Malda College Analysis Report')">
+    💡Overall Malda College Analysis Report
+  </button>
+  <button class="bubble-btn" onclick="sendDefaultQuery('Mlada college overall Leave Analysis Report')">
+    📌 Mlada college overall Leave Analysis Report
+  </button>-->
+</div>
+       
+      </div>
+    </section>
+    <div class="composer">
+      <div id="status" role="status"></div>
+      <form id="form">
+        
+        <textarea id="question" rows="1" placeholder="Ask a question about your documents..." aria-label="Question" required></textarea>
+        <button id="send" type="submit" aria-label="Send question">
+          <span class="loading-spinner" aria-hidden="true"></span>
+          <span class="send-label">Send</span>
+          <span class="send-icon" aria-hidden="true">&#10148;</span>
+        </button>
+      </form>
+      <div id="status" role="status"></div>
+    </div>
+  </main>
+  <script>
+    const form=document.querySelector('#form'), 
+    input=document.querySelector('#question'), 
+    messages=document.querySelector('#messages'), 
+    welcome=document.querySelector('#welcome'), 
+    status=document.querySelector('#status'), 
+    send=document.querySelector('#send');
+    
+    function renderCharts(bubble) {
+      if (typeof Chart === 'undefined') return;
+
+      // Supports fenced JSON blocks returned by the API:
+      // ```chart
+      // {"type":"bar","title":"...","labels":[...],"data":[...]}
+      // ```
+      const chartBlocks = bubble.querySelectorAll('pre code.language-chart, pre code.language-json-chart');
+
+      chartBlocks.forEach(code => {
+        try {
+          const spec = JSON.parse(code.textContent.trim());
+          if (!spec || !Array.isArray(spec.labels) || !Array.isArray(spec.data)) return;
+
+          const typeMap = {
+            bar: 'bar',
+            line: 'line',
+            pie: 'pie',
+            doughnut: 'doughnut'
+          };
+          const chartType = typeMap[(spec.type || 'bar').toLowerCase()] || 'bar';
+
+          const wrapper = document.createElement('div');
+          wrapper.className = 'chat-chart';
+
+          if (spec.title) {
+            const title = document.createElement('div');
+            title.className = 'chart-title';
+            title.textContent = spec.title;
+            wrapper.appendChild(title);
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.setAttribute('aria-label', spec.title || 'Chat chart');
+          canvas.setAttribute('role', 'img');
+          wrapper.appendChild(canvas);
+
+          code.closest('pre').replaceWith(wrapper);
+
+          const datasets = Array.isArray(spec.datasets)
+            ? spec.datasets
+            : [{
+                label: spec.label || 'Value',
+                data: spec.data
+              }];
+
+          const isCircular = chartType === 'pie' || chartType === 'doughnut';
+
+          new Chart(canvas.getContext('2d'), {
+            type: chartType,
+            data: {
+              labels: spec.labels,
+              datasets: datasets.map(ds => ({
+                label: ds.label || 'Value',
+                data: ds.data,
+                borderWidth: 2,
+                tension: 0.3,
+                backgroundColor: ds.backgroundColor || undefined,
+                borderColor: ds.borderColor || undefined,
+                fill: false
+              }))
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: datasets.length > 1 || isCircular,
+                  position: 'bottom'
+                }
+              },
+              scales: isCircular ? {} : {
+                y: {
+                  beginAtZero: true,
+                  grid: { color: '#e2e8f0' }
+                },
+                x: {
+                  grid: { display: false }
+                }
+              }
+            }
+          });
+        } catch (error) {
+          console.warn('Invalid chart block:', error);
+        }
+      });
+    }
+
+    function renderTableCharts(bubble) {
+      if (typeof Chart === 'undefined') return;
+
+      bubble.querySelectorAll('table').forEach(table => {
+        const rows = [...table.querySelectorAll('tr')];
+        if (rows.length < 3) return;
+
+        const headerCells = [...rows[0].querySelectorAll('th, td')];
+        const bodyRows = rows.slice(1).map(row => [...row.querySelectorAll('td')]);
+        if (headerCells.length < 2 || bodyRows.some(row => row.length !== headerCells.length)) return;
+
+        const numericValue = value => {
+          const cleaned = value.replace(/[%,$\s]/g, '');
+          const parsed = Number(cleaned);
+          return Number.isFinite(parsed) ? parsed : null;
+        };
+
+        let valueIndex = -1;
+        let bestNumericCount = 1;
+        for (let index = 1; index < headerCells.length; index += 1) {
+          const count = bodyRows.filter(row => numericValue(row[index].textContent.trim()) !== null).length;
+          if (count > bestNumericCount) {
+            bestNumericCount = count;
+            valueIndex = index;
+          }
+        }
+        if (valueIndex === -1) return;
+
+        const labels = bodyRows.map(row => row[0].textContent.trim());
+        const data = bodyRows.map(row => numericValue(row[valueIndex].textContent.trim()));
+        const wrapper = document.createElement('div');
+        wrapper.className = 'chat-chart';
+        const title = document.createElement('div');
+        title.className = 'chart-title';
+        title.textContent = `${headerCells[valueIndex].textContent.trim()} by ${headerCells[0].textContent.trim()}`;
+        wrapper.appendChild(title);
+        const canvas = document.createElement('canvas');
+        canvas.setAttribute('aria-label', title.textContent);
+        canvas.setAttribute('role', 'img');
+        wrapper.appendChild(canvas);
+        table.insertAdjacentElement('afterend', wrapper);
+
+        new Chart(canvas.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: headerCells[valueIndex].textContent.trim(),
+              data,
+              borderWidth: 1,
+              backgroundColor: '#2563eb'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true }, x: { grid: { display: false } } }
+          }
+        });
+      });
+    }
+
+    function addMessage(role,text,sources=[])
+    {
+        welcome.hidden=true;
+        const item=document.createElement('article');
+        item.className=`message ${role}`;
+        const bubble=document.createElement('div');
+        bubble.className='bubble';
+
+        // Parse markdown text to formatted HTML
+        if (typeof marked !== 'undefined') {
+            bubble.innerHTML = marked.parse(text);
+        } else {
+            bubble.innerHTML = marked.parse(text);
+        }
+
+        // Convert chart JSON blocks into interactive Chart.js charts.
+        renderCharts(bubble);
+        renderTableCharts(bubble);
+
+        item.append(bubble);
+        messages.append(item);
+        messages.scrollTop=messages.scrollHeight;
+    }
+
+    function setLoadingState(isLoading) {
+        send.disabled = isLoading;
+        send.classList.toggle('loading', isLoading);
+        const label = send.querySelector('.send-label');
+        if (label) {
+            label.textContent = isLoading ? 'Loading...' : 'Send';
+        }
+        status.textContent = isLoading ? 'Searching your documents...' : '';
+    }
+
+    form.addEventListener('submit',async event=>{
+        event.preventDefault();
+        const text=input.value.trim();
+        if(!text||send.disabled) return;
+        
+        addMessage('user',text);
+        input.value='';
+        setLoadingState(true);
+        
+        try{
+            const response=await fetch('/api/chat',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({question:text})
+            });
+            const data=await response.json();
+            if(!response.ok) throw new Error(data.error||'The chat service is unavailable.');
+            addMessage('assistant',data.answer||'I could not find an answer.',data.sources||[]);
+            status.textContent='';
+        } catch(error){
+            addMessage('assistant',`Sorry, I could not complete that request. ${error.message}`);
+            status.textContent='Check that the server is running.';
+        } finally {
+            setLoadingState(false);
+            input.focus();
+        }
+    });
+
+    document.querySelector('#clear').addEventListener('click',()=>{
+        messages.querySelectorAll('.message').forEach(message=>message.remove());
+        welcome.hidden=false;
+        setLoadingState(false);
+        status.textContent='';
+        input.focus();
+    });
+
+    input.addEventListener('keydown',event=>{
+        if(event.key==='Enter'&&!event.shiftKey){
+            event.preventDefault();
+            form.requestSubmit();
+        }
+    });
+
+    /*************
+     * Suggestion Bubbles
+     *************/
+    function sendDefaultQuery(text) {
+      const inputField = document.querySelector('#question');
+      alert(`You clicked a suggestion bubble: "${text}"`); // Optional: For debugging
+      if (!inputField) return;
+
+      inputField.value = text;
+      inputField.focus();
+      form.requestSubmit();
+    }
+  </script>
+</body>
+</html>
